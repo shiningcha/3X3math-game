@@ -1,13 +1,13 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
 import { getDatabase, ref, set, push, onValue, update, remove, get } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
 
-// ========== 공통 화면 제어 ==========
+// ===== 화면 전환 =====
 function show(id) {
   document.querySelectorAll('.container>div').forEach(x=>x.classList.add('hidden'));
   document.getElementById(id).classList.remove('hidden');
 }
 
-// ========== HOME 선택 ==========
+// ===== HOME =====
 document.getElementById('btn-solo').onclick = () => {
   show('screen-solo');
   soloNewGame();
@@ -16,8 +16,15 @@ document.getElementById('btn-multi').onclick = () => {
   show('screen-multi-nick');
   document.getElementById('multi-nick').value = '';
 };
+document.getElementById('multi-clear-btn').onclick = async () => {
+  if (confirm('정말 순위 및 참가자를 모두 초기화할까요?')) {
+    await remove(ref(db,`games/${gameKey}`));
+    alert('모든 참가자와 점수가 초기화되었습니다!');
+    show('screen-home');
+  }
+};
 
-// ========== 솔로 모드 ==========
+// ===== 솔로 모드 =====
 let soloNums = [], soloTarget = 0;
 function soloShuffle(a) {
   let arr = a.slice();
@@ -105,8 +112,7 @@ document.getElementById('solo-form').onsubmit = function(e){
 document.getElementById('solo-restart').onclick = soloNewGame;
 document.getElementById('solo-home').onclick = ()=>show('screen-home');
 
-
-// ========== 멀티 모드 ==========
+// ===== 멀티 모드 =====
 const firebaseConfig = {
   apiKey: "AIzaSyAcAC53GBuchWwGChVEIouqpqUZZVVaKL4",
   authDomain: "x3-math-game.firebaseapp.com",
@@ -135,7 +141,9 @@ document.getElementById('multi-nick-btn').onclick = async () => {
   });
   show('screen-multi-lobby');
 };
-document.getElementById('multi-home').onclick = ()=>show('screen-home');
+document.querySelectorAll('#multi-home').forEach(btn=>{
+  btn.onclick = ()=>show('screen-home');
+});
 
 // 2. 대기실 참가자 모니터링 + 방장
 onValue(ref(db,`games/${gameKey}/players`), snap=>{
@@ -147,6 +155,7 @@ onValue(ref(db,`games/${gameKey}/players`), snap=>{
     html += `<div>${v.name} <span style="color:#1976d2;">${v.score}점</span></div>`;
   });
   document.getElementById('multi-players').innerHTML = html;
+  // "게임 시작" 버튼: 방장이면 항상 표시(게임 중에도)
   if(playerArr.length>0 && playerArr[0].id===myId) {
     isHost = true;
     document.getElementById('multi-start-btn').style.display = '';
@@ -158,6 +167,9 @@ onValue(ref(db,`games/${gameKey}/players`), snap=>{
 
 // 3. 게임 시작
 document.getElementById('multi-start-btn').onclick = async () => {
+  // 이미 started=true면 아무것도 안 함
+  const state = (await get(ref(db,`games/${gameKey}/state`))).val();
+  if(state && state.started) return;
   // 문제 세트(10개)
   const questions = [];
   for(let i=0;i<10;i++) {
@@ -170,7 +182,7 @@ document.getElementById('multi-start-btn').onclick = async () => {
     });
   }
   await set(ref(db,`games/${gameKey}/state`), {
-    started:true, current:0, timer:180, winner:'', answered:false
+    started:true, current:0, winner:'', answered:false
   });
   await set(ref(db,`games/${gameKey}/questions`), questions);
   // 점수 초기화
@@ -216,9 +228,7 @@ onValue(ref(db,`games/${gameKey}/state`), snap=>{
   }
   show('screen-multi-game');
   multiRenderQuestion();
-  // multiStartTimer(state.timer||180);
 
-  // answered/winner 반영: 이미 맞춘 사람이 있으면 입력창 비활성
   if(state.answered && state.winner){
     document.getElementById('multi-msg').textContent = `${state.winner}님이 정답을 맞췄어요!`;
     document.getElementById('multi-answer-input').disabled = true;
@@ -263,29 +273,6 @@ function multiRenderScore() {
     document.getElementById('multi-scoreboard').innerHTML = html;
   });
 }
-// // 타이머
-// let multiTimerInt = null;
-// function multiStartTimer(t) {
-//   clearInterval(multiTimerInt);
-//   let remain = t;
-//   document.getElementById('multi-timer').textContent = `남은 시간: ${multiFormatTime(remain)}`;
-//   multiTimerInt = setInterval(async ()=>{
-//     remain--;
-//     document.getElementById('multi-timer').textContent = `남은 시간: ${multiFormatTime(remain)}`;
-//     if(remain<=0) {
-//       clearInterval(multiTimerInt);
-//       await update(ref(db,`games/${gameKey}/state`),{
-//         current:currentQ+1, timer:180, winner:'', answered:false
-//       });
-//     } else {
-//       await update(ref(db,`games/${gameKey}/state`), {timer:remain});
-//     }
-//   },1000);
-// }
-// function multiFormatTime(sec) {
-//   const m = Math.floor(sec/60), s = sec%60;
-//   return `${m}:${s.toString().padStart(2,'0')}`;
-// }
 
 // 정답 입력(항상 활성화)
 document.getElementById('multi-answer-form').onsubmit = async (e) => {
@@ -345,7 +332,7 @@ document.getElementById('multi-answer-form').onsubmit = async (e) => {
       document.getElementById('multi-answer-input').disabled = true;
       setTimeout(()=>{
         update(ref(db,`games/${gameKey}/state`),{
-          current:currentQ+1, timer:180, winner:'', answered:false
+          current:currentQ+1, winner:'', answered:false
         });
         document.getElementById('multi-answer-input').disabled = false;
         document.getElementById('multi-msg').textContent = '';
@@ -374,18 +361,3 @@ function multiShowResult() {
   });
 }
 document.getElementById('multi-restart-btn').onclick = ()=>location.reload();
-document.querySelectorAll('#multi-home').forEach(btn=>{
-  btn.onclick = ()=>{
-    show('screen-home');
-  }
-});
-document.getElementById('multi-clear-btn').onclick = async () => {
-  if (!confirm('정말 모든 참가자 및 점수를 초기화할까요?')) return;
-  // players, state, questions 모두 삭제
-  await remove(ref(db,`games/${gameKey}/players`));
-  await remove(ref(db,`games/${gameKey}/state`));
-  await remove(ref(db,`games/${gameKey}/questions`));
-  alert('모든 참가자와 점수가 초기화되었습니다!');
-  // 홈 화면으로 강제 이동 (원하면 다른 처리도 가능)
-  show('screen-home');
-};
