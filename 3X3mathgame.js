@@ -75,21 +75,15 @@ document.getElementById('solo-form').onsubmit = function(e){
   const lines = [
     [0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]
   ];
+  let nums = soloNums.slice();
   let found = false;
+  const usedSet = new Set(matches.map(Number));
   for(const line of lines){
-    let arr = line.map(i=>soloNums[i]);
-    let used = matches.map(Number);
-    let tmp = [...arr];
-    let ok = true;
-    for(const n of used){
-      const idx = tmp.indexOf(n);
-      if(idx===-1){
-        ok = false;
-        break;
-      }
-      tmp.splice(idx,1);
-    }
-    if(ok){
+    const lineNums = line.map(i=>nums[i]);
+    const lineSet = new Set(lineNums);
+    if (usedSet.size === 3 &&
+        lineSet.size === 3 &&
+        [...usedSet].every(v => lineSet.has(v))) {
       found = true;
       break;
     }
@@ -291,24 +285,17 @@ document.getElementById('multi-answer-form').onsubmit = async (e) => {
   }
   let nums = [];
   q.grid.forEach(row=>nums.push(...row));
-  let used = matches.map(Number);
-  let found = false;
   const lines = [
     [0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]
   ];
+  let found = false;
+  const usedSet = new Set(matches.map(Number));
   for(const line of lines){
-    let arr = line.map(i=>nums[i]);
-    let tmp = [...arr];
-    let ok = true;
-    for(const n of used){
-      const idx = tmp.indexOf(n);
-      if(idx===-1){
-        ok = false;
-        break;
-      }
-      tmp.splice(idx,1);
-    }
-    if(ok){
+    const lineNums = line.map(i=>nums[i]);
+    const lineSet = new Set(lineNums);
+    if (usedSet.size === 3 &&
+        lineSet.size === 3 &&
+        [...usedSet].every(v => lineSet.has(v))) {
       found = true;
       break;
     }
