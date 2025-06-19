@@ -40,7 +40,9 @@ function soloNewGame() {
   for(let i=0;i<9;i++) html += `<div class="cell">${soloNums[i]}</div>`;
   document.getElementById('solo-grid').innerHTML = html;
   const lines = [
-    [0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]
+    [0,1,2],[3,4,5],[6,7,8],   // 가로
+    [0,3,6],[1,4,7],[2,5,8],   // 세로
+    [0,4,8],[2,4,6]            // 대각선
   ];
   const line = lines[Math.floor(Math.random()*lines.length)];
   const vals = line.map(i=>soloNums[i]);
@@ -73,9 +75,11 @@ document.getElementById('solo-form').onsubmit = function(e){
     return;
   }
   const lines = [
-    [0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
   ];
-  let nums = soloNums.slice();
+  let nums = soloNums.slice(); // 1차원 9칸
   let found = false;
   const usedSet = new Set(matches.map(Number));
   for(const line of lines){
@@ -133,7 +137,17 @@ document.getElementById('multi-nick-btn').onclick = async () => {
     joined: Date.now(),
     online: true
   });
-  show('screen-multi-lobby');
+
+  // 🔥 게임이 이미 시작된 경우, 바로 게임화면으로 진입!
+  const state = (await get(ref(db,`games/${gameKey}/state`))).val();
+  if(state && state.started && state.current < 10) {
+    show('screen-multi-game');
+    multiRenderQuestion();
+  } else if(state && state.started && state.current >= 10) {
+    multiShowResult();
+  } else {
+    show('screen-multi-lobby');
+  }
 };
 document.querySelectorAll('#multi-home').forEach(btn=>{
   btn.onclick = ()=>show('screen-home');
@@ -149,7 +163,6 @@ onValue(ref(db,`games/${gameKey}/players`), snap=>{
     html += `<div>${v.name} <span style="color:#1976d2;">${v.score}점</span></div>`;
   });
   document.getElementById('multi-players').innerHTML = html;
-  // "게임 시작" 버튼: 방장이면 항상 표시(게임 중에도)
   if(playerArr.length>0 && playerArr[0].id===myId) {
     isHost = true;
     document.getElementById('multi-start-btn').style.display = '';
@@ -161,10 +174,8 @@ onValue(ref(db,`games/${gameKey}/players`), snap=>{
 
 // 3. 게임 시작
 document.getElementById('multi-start-btn').onclick = async () => {
-  // 이미 started=true면 아무것도 안 함
   const state = (await get(ref(db,`games/${gameKey}/state`))).val();
   if(state && state.started) return;
-  // 문제 세트(10개)
   const questions = [];
   for(let i=0;i<10;i++) {
     const nums = soloShuffle([1,2,3,4,5,6,7,8,9]);
@@ -179,7 +190,6 @@ document.getElementById('multi-start-btn').onclick = async () => {
     started:true, current:0, winner:'', answered:false
   });
   await set(ref(db,`games/${gameKey}/questions`), questions);
-  // 점수 초기화
   get(ref(db,`games/${gameKey}/players`)).then(snap=>{
     snap.forEach(child=>{
       update(ref(db,`games/${gameKey}/players/${child.key}`), {score:0});
@@ -273,7 +283,6 @@ document.getElementById('multi-answer-form').onsubmit = async (e) => {
   e.preventDefault();
   const expr = document.getElementById('multi-answer-input').value.trim();
   document.getElementById('multi-answer-input').value = '';
-  // 이미 누군가 맞췄는지 확인
   const st = (await get(ref(db,`games/${gameKey}/state`))).val();
   if(st.answered) return;
 
@@ -283,10 +292,13 @@ document.getElementById('multi-answer-form').onsubmit = async (e) => {
     document.getElementById('multi-msg').textContent = '숫자 3개를 사용해야 합니다!';
     return;
   }
+  // 🔥 nums는 반드시 1차원 9칸 [0]~[8]
   let nums = [];
   q.grid.forEach(row=>nums.push(...row));
   const lines = [
-    [0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]
+    [0,1,2],[3,4,5],[6,7,8],   // 가로
+    [0,3,6],[1,4,7],[2,5,8],   // 세로
+    [0,4,8],[2,4,6]            // 대각선
   ];
   let found = false;
   const usedSet = new Set(matches.map(Number));
