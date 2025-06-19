@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>3x3 Math Game - Solo & Multi</title>
+  <link rel="stylesheet" href="3X3mathgame.css" />
+  <!-- script.js만 따로 관리! -->
+</head>
+<body>
+  <div class="container">
+    <!-- 🏠 홈: 선택 화면 -->
+    <div id="screen-home">
+      <h2>3x3 Math Game</h2>
+      <button id="btn-solo">솔로 플레이</button>
+      <button id="btn-multi">멀티 플레이</button>
+      <button id="multi-clear-btn">순위 초기화</button> 
+    </div>
+    
+    <!-- 🎲 솔로 -->
+    <div id="screen-solo" class="hidden">
+      <h3>솔로 플레이</h3>
+      <div id="solo-target"></div>
+      <div id="solo-grid" class="grid"></div>
+      <form id="solo-form">
+        <input id="solo-input" placeholder="식 입력 (예: 7+8/2)" autocomplete="off" />
+        <button type="submit">제출</button>
+      </form>
+      <div id="solo-msg"></div>
+      <button id="solo-restart">새 게임</button>
+      <button id="solo-home">홈으로</button>
+    </div>
+
+    <!-- 👥 멀티 - 닉네임 입력 -->
+    <div id="screen-multi-nick" class="hidden">
+      <h3>멀티 플레이 입장</h3>
+      <input id="multi-nick" maxlength="12" placeholder="닉네임 입력" autocomplete="off" />
+      <button id="multi-nick-btn">입장</button>
+      <button id="multi-home">홈으로</button>
+    </div>
+
+    <!-- 멀티 - 대기실 -->
+    <div id="screen-multi-lobby" class="hidden">
+      <h3>대기실</h3>
+      <div id="multi-players"></div>
+      <button id="multi-start-btn" style="display:none;">게임 시작</button>
+      <button id="multi-home">홈으로</button>
+    </div>
+
+    <!-- 멀티 - 게임진행 -->
+    <div id="screen-multi-game" class="hidden">
+      <div id="multi-timer"></div>
+      <div id="multi-scoreboard"></div>
+      <h3>문제 <span id="multi-qnum"></span> / 10</h3>
+      <div id="multi-target-number"></div>
+      <div id="multi-grid" class="grid"></div>
+      <button id="multi-answer-btn">정답!</button>
+      <form id="multi-answer-form" class="hidden" style="margin:10px 0;">
+        <input id="multi-answer-input" placeholder="식 입력 (예: 7+8/2)" maxlength="20" autocomplete="off" />
+        <button type="submit">제출</button>
+      </form>
+      <div id="multi-msg"></div>
+      <button id="multi-home">홈으로</button>
+    </div>
+
+    <!-- 멀티 - 결과 -->
+    <div id="screen-multi-result" class="hidden">
+      <h2>게임 결과</h2>
+      <div id="multi-final-score"></div>
+      <button id="multi-restart-btn">다시하기</button>
+      <button id="multi-home">홈으로</button>
+    </div>
+  </div>
+  <script type="module" src="3X3mathgame.js"></script>
+</body>
+</html>
