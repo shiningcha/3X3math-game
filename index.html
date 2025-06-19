@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>3x3 Math Game - Solo & Multi</title>
-  <link rel="stylesheet" href="3X3mathgame.css" />
-  <!-- script.js만 따로 관리! -->
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="container">
@@ -13,7 +12,6 @@
       <h2>3x3 Math Game</h2>
       <button id="btn-solo">솔로 플레이</button>
       <button id="btn-multi">멀티 플레이</button>
-      <button id="multi-clear-btn">순위 초기화</button> 
     </div>
     
     <!-- 🎲 솔로 -->
@@ -48,12 +46,11 @@
 
     <!-- 멀티 - 게임진행 -->
     <div id="screen-multi-game" class="hidden">
-      <div id="multi-timer"></div>
       <div id="multi-scoreboard"></div>
       <h3>문제 <span id="multi-qnum"></span> / 10</h3>
       <div id="multi-target-number"></div>
       <div id="multi-grid" class="grid"></div>
-      <form id="multi-answer-form" class="hidden" style="margin:10px 0;">
+      <form id="multi-answer-form" style="margin:10px 0;">
         <input id="multi-answer-input" placeholder="식 입력 (예: 7+8/2)" maxlength="20" autocomplete="off" />
         <button type="submit">제출</button>
       </form>
@@ -69,6 +66,6 @@
       <button id="multi-home">홈으로</button>
     </div>
   </div>
-  <script type="module" src="3X3mathgame.js"></script>
+  <script type="module" src="script.js"></script>
 </body>
 </html>
