@@ -32,6 +32,15 @@ const db = getDatabase(app);
 let myId = '', myName = '', isHost = false, currentQ = 0, gameKey = '';
 
 // ===== 홈 화면 =====
+document.getElementById('btn-solo').onclick = () => {
+  show('screen-solo');
+  soloNewGame();
+};
+document.getElementById('btn-multi').onclick = () => {
+  show('screen-multi-choice');
+};
+
+// 멀티 선택 → 방 만들기/참가
 document.getElementById('btn-create-room').onclick = async () => {
   let roomId = makeRoomId();
   while((await get(ref(db,`games/${roomId}`))).exists())
@@ -56,13 +65,107 @@ document.getElementById('btn-join-room').onclick = async () => {
   }
 };
 
-document.getElementById('multi-clear-btn').onclick = async () => {
-  if (confirm('정말 모든 방을 초기화할까요?')) {
-    await remove(ref(db,`games`));
-    alert('초기화 완료!');
-    show('screen-home');
+// "홈으로" 버튼들
+document.getElementById('multi-choice-home').onclick = ()=>show('screen-home');
+document.getElementById('multi-nick-home').onclick = ()=>show('screen-multi-choice');
+document.getElementById('multi-lobby-home').onclick = ()=>{
+  if (myId && gameKey) remove(ref(db,`games/${gameKey}/players/${myId}`));
+  show('screen-multi-choice');
+};
+document.getElementById('multi-game-home').onclick = ()=>{
+  if (myId && gameKey) remove(ref(db,`games/${gameKey}/players/${myId}`));
+  show('screen-multi-choice');
+};
+document.getElementById('multi-result-home').onclick = ()=>{
+  if (myId && gameKey) remove(ref(db,`games/${gameKey}/players/${myId}`));
+  show('screen-multi-choice');
+};
+document.getElementById('solo-home').onclick = ()=>show('screen-home');
+
+// ===== 솔로 모드 =====
+let soloNums = [], soloTarget = 0;
+function soloShuffle(a) {
+  let arr = a.slice();
+  for (let i=arr.length-1;i>0;i--) {
+    const j = Math.floor(Math.random() * (i+1));
+    [arr[i],arr[j]] = [arr[j],arr[i]];
+  }
+  return arr;
+}
+function soloNewGame() {
+  soloNums = soloShuffle([1,2,3,4,5,6,7,8,9]);
+  let html = '';
+  for(let i=0;i<9;i++) html += `<div class="cell">${soloNums[i]}</div>`;
+  document.getElementById('solo-grid').innerHTML = html;
+  const lines = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+  const line = lines[Math.floor(Math.random()*lines.length)];
+  const vals = line.map(i=>soloNums[i]);
+  let target = vals[0]+vals[1]+vals[2];
+  let expr, value;
+  let ops = ['+','-','*','/'];
+  for(let k=0;k<40;k++) {
+    let [a,b,c] = vals;
+    let op1 = ops[Math.floor(Math.random()*4)];
+    let op2 = ops[Math.floor(Math.random()*4)];
+    expr = `${a}${op1}${b}${op2}${c}`;
+    try{
+      value = Math.round(eval(expr) * 1000)/1000;
+      if(Number.isFinite(value) && value%1===0 && value>=1 && value<=36) {
+        target = value;
+        break;
+      }
+    }catch{}
+  }
+  soloTarget = target;
+  document.getElementById('solo-target').textContent = `목표 숫자: ${target}`;
+  document.getElementById('solo-msg').textContent = '';
+}
+document.getElementById('solo-form').onsubmit = function(e){
+  e.preventDefault();
+  const expr = document.getElementById('solo-input').value.trim();
+  const matches = expr.match(/\d+/g);
+  if(!matches || matches.length!==3) {
+    document.getElementById('solo-msg').textContent = '반드시 숫자 3개만 사용하세요!';
+    return;
+  }
+  const lines = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+  let nums = soloNums.slice();
+  let found = false;
+  const usedSet = new Set(matches.map(Number));
+  for(const line of lines){
+    const lineNums = line.map(i=>nums[i]);
+    const lineSet = new Set(lineNums);
+    if (usedSet.size === 3 &&
+        lineSet.size === 3 &&
+        [...usedSet].every(v => lineSet.has(v))) {
+      found = true;
+      break;
+    }
+  }
+  if(!found){
+    document.getElementById('solo-msg').textContent = '세 숫자가 한 줄에 있어야 합니다!';
+    return;
+  }
+  try{
+    let val = eval(expr);
+    if(Math.round(val*1000)/1000 == soloTarget){
+      document.getElementById('solo-msg').textContent = '정답!';
+    }else{
+      document.getElementById('solo-msg').textContent = '틀렸어요!';
+    }
+  }catch{
+    document.getElementById('solo-msg').textContent = '올바른 수식이 아닙니다!';
   }
 };
+document.getElementById('solo-restart').onclick = soloNewGame;
 
 // ===== 닉네임 입력/입장 =====
 document.getElementById('multi-nick-btn').onclick = async () => {
@@ -76,9 +179,7 @@ document.getElementById('multi-nick-btn').onclick = async () => {
     joined: Date.now(),
     online: true
   });
-  // onDisconnect로 자동삭제 예약!
   ref(db,`games/${gameKey}/players/${myId}`).onDisconnect().remove();
-
   // 게임상태에 따라 진입화면 다르게
   const state = (await get(ref(db,`games/${gameKey}/state`))).val();
   if(state && state.started && state.current < 10) {
@@ -91,14 +192,6 @@ document.getElementById('multi-nick-btn').onclick = async () => {
   }
   document.getElementById('multi-nick').value = '';
 };
-
-document.querySelectorAll('#multi-home').forEach(btn=>{
-  btn.onclick = ()=>{
-    if (myId && gameKey)
-      remove(ref(db,`games/${gameKey}/players/${myId}`)); // 즉시 삭제
-    show('screen-home');
-  };
-});
 
 // ===== 대기실 참가자 =====
 onValue(ref(db,()=>gameKey?`games/${gameKey}/players`:null), snap=>{
@@ -121,7 +214,7 @@ onValue(ref(db,()=>gameKey?`games/${gameKey}/players`:null), snap=>{
   // 자동 방 삭제: players가 0명이면 방 전체 삭제
   if (!snap.exists() || snap.size === 0) {
     remove(ref(db,`games/${gameKey}`));
-    show('screen-home');
+    show('screen-multi-choice');
   }
 });
 
@@ -149,14 +242,6 @@ document.getElementById('multi-start-btn').onclick = async () => {
     });
   });
 };
-function soloShuffle(a) {
-  let arr = a.slice();
-  for (let i=arr.length-1;i>0;i--) {
-    const j = Math.floor(Math.random() * (i+1));
-    [arr[i],arr[j]] = [arr[j],arr[i]];
-  }
-  return arr;
-}
 function genQuestion(nums) {
   const lines = [
     [0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]
