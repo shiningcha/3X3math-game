@@ -101,8 +101,8 @@ button:hover {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 50px;            /* 버튼 사이 공간을 넓게 */
-  margin-bottom: 36px;
+  gap: 40px;            /* 버튼 사이 공간을 넓게 */
+  margin-bottom: 40px;
 }
 #screen-home button {
   min-width: 350px;
