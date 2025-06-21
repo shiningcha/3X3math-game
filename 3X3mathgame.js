@@ -406,3 +406,4 @@ function multiShowResult() {
   });
 }
 document.getElementById('multi-restart-btn').onclick = ()=>location.reload();
+document.getElementById('username-display').textContent = 'By Hyunsoo';
