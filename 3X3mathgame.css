@@ -94,13 +94,13 @@ button:hover {
 #screen-home h2 {
   font-size: 2.7rem;   /* 제목 더 크게! */
   font-weight: 800;
-  margin-bottom: 50px; /* 제목 아래 공간 넓게 */
+  margin-bottom: 40px; /* 제목 아래 공간 넓게 */
 }
 
 .home-btns {
   display: flex;
   flex-direction: column;   /* 세로 정렬 */
-  gap: 38px;                /* 버튼 간격 넓게! */
+  gap: 50px;                /* 버튼 간격 넓게! */
   margin-bottom: 36px;
 }
 
