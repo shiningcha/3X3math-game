@@ -13,6 +13,18 @@ body {
   box-shadow: 0 8px 32px rgba(80,90,110,0.13);
   min-height: 80vh;
 }
+.corner-name {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  margin: 0;
+  color: #757575;
+  font-weight: 500;
+  opacity: 0.82;
+  font-size: 1.08rem;
+  pointer-events: none;
+  z-index: 100;
+}
 h2, h3 {
   text-align: center;
   margin-top: 0;
@@ -70,4 +82,27 @@ button:hover {
   margin: 7px 0 10px 0;
   color: #d32f2f;
   font-weight: bold;
+}
+#screen-home {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 350px;
+}
+#screen-home h2 {
+  margin-bottom: 36px;
+}
+.home-btns {
+  display: flex;
+  gap: 28px;
+  margin-bottom: 46px;
+}
+#screen-home button {
+  min-width: 150px;
+  font-size: 1.28rem;
+  padding: 18px 0;
+  font-weight: 500;
+  border-radius: 14px;
+  margin: 0;
 }
