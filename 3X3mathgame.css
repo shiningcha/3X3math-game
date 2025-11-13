@@ -92,23 +92,23 @@ button:hover {
 }
 
 #screen-home h2 {
-  font-size: 2.7rem;   /* 제목 더 크게! */
+  font-size: 2.7rem;
   font-weight: 800;
-  margin-bottom: 38px; /* 제목 아래 공간 넓게 */
+  margin-bottom: 18px;
 }
 
 .home-btns {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 38px;            /* 버튼 사이 공간을 넓게 */
-  margin-bottom: 38px;
+  gap: 18px;
+  margin-bottom: 18px;
 }
 #screen-home button {
-  min-width: 35px;
-  font-size: 2.1rem;
-  padding: 30px 0;
+  min-width: 120px;
+  font-size: 1.2rem;
+  padding: 16px 20px;
   font-weight: 600;
-  border-radius: 34px;
+  border-radius: 12px;
   margin: 0;
 }

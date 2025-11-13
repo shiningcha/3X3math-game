@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>3x3 Math Game</title>
-  <link rel="stylesheet" href="3X3mathgame.css" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="container">
@@ -11,11 +11,10 @@
     <!-- 1. 홈: 게임제목 + 선택 -->
     <div id="screen-home">
       <h2>3x3 Math Game</h2>
-      <button id="btn-solo">솔로 플레이</button>
-      <button id="btn-multi">멀티 플레이</button>
-    </div>
-    </div>
-      <h4 id="username-display" class="corner-name">By Hyunsoo</h4>
+      <div class="home-btns">
+        <button id="btn-solo">솔로 플레이</button>
+        <button id="btn-multi">멀티 플레이</button>
+      </div>
     </div>
 
     <!-- 2. 솔로 -->
@@ -79,6 +78,9 @@
     </div>
 
   </div>
-  <script type="module" src="3X3mathgame.js"></script>
+
+  <h4 id="username-display" class="corner-name">By Hyunsoo</h4>
+
+  <script type="module" src="3x3mathgame.js"></script>
 </body>
 </html>

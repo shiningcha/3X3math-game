@@ -1,13 +1,37 @@
+// 3x3mathgame.js (module)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
-import { getDatabase, ref, set, onValue, update, remove, get } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
+import {
+  getDatabase,
+  ref,
+  set,
+  onValue,
+  update,
+  remove,
+  get,
+  onDisconnect
+} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-database.js";
 
-// ===== 화면 전환 =====
+// --- Your Firebase config (you provided this) ---
+const firebaseConfig = {
+  apiKey: "AIzaSyAcAC53GBuchWwGChVEIouqpqUZZVVaKL4",
+  authDomain: "x3-math-game.firebaseapp.com",
+  databaseURL: "https://x3-math-game-default-rtdb.firebaseio.com",
+  projectId: "x3-math-game",
+  storageBucket: "x3-math-game.firebasestorage.app",
+  messagingSenderId: "1097398631602",
+  appId: "1:1097398631602:web:fb85abfa9d8dd29db3ddab",
+  measurementId: "G-PQDLZZHKWX"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// ======= helpers =======
 function show(id) {
   document.querySelectorAll('.container>div').forEach(x=>x.classList.add('hidden'));
   document.getElementById(id).classList.remove('hidden');
 }
 
-// ===== 방코드 생성 =====
 function makeRoomId() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = '';
@@ -15,75 +39,6 @@ function makeRoomId() {
   return code;
 }
 
-// ===== Firebase =====
-const firebaseConfig = {
-  apiKey: "AIzaSyAcAC53GBuchWwGChVEIouqpqUZZVVaKL4",
-  authDomain: "x3-math-game.firebaseapp.com",
-  projectId: "x3-math-game",
-  storageBucket: "x3-math-game.appspot.com",
-  messagingSenderId: "1097398631602",
-  appId: "1:1097398631602:web:fb85abfa9d8dd29db3ddab",
-  measurementId: "G-PQDLZZHKWX"
-};
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-
-// ===== 전역 =====
-let myId = '', myName = '', isHost = false, currentQ = 0, gameKey = '';
-
-// ===== 홈 화면 =====
-document.getElementById('btn-solo').onclick = () => {
-  show('screen-solo');
-  soloNewGame();
-};
-document.getElementById('btn-multi').onclick = () => {
-  show('screen-multi-choice');
-};
-
-// 멀티 선택 → 방 만들기/참가
-document.getElementById('btn-create-room').onclick = async () => {
-  let roomId = makeRoomId();
-  while((await get(ref(db,`games/${roomId}`))).exists())
-    roomId = makeRoomId();
-  gameKey = roomId;
-  await set(ref(db,`games/${roomId}/meta`), {created: Date.now()});
-  document.getElementById('room-code').textContent = roomId;
-  show('screen-multi-nick');
-};
-
-document.getElementById('btn-join-room').onclick = async () => {
-  const input = prompt("방 코드 입력 (예: K94F)").toUpperCase();
-  if (!input) return;
-  const roomId = input.trim();
-  const snap = await get(ref(db,`games/${roomId}`));
-  if (snap.exists()) {
-    gameKey = roomId;
-    document.getElementById('room-code').textContent = roomId;
-    show('screen-multi-nick');
-  } else {
-    alert("해당 방이 존재하지 않습니다.");
-  }
-};
-
-// "홈으로" 버튼들
-document.getElementById('multi-choice-home').onclick = ()=>show('screen-home');
-document.getElementById('multi-nick-home').onclick = ()=>show('screen-multi-choice');
-document.getElementById('multi-lobby-home').onclick = ()=>{
-  if (myId && gameKey) remove(ref(db,`games/${gameKey}/players/${myId}`));
-  show('screen-multi-choice');
-};
-document.getElementById('multi-game-home').onclick = ()=>{
-  if (myId && gameKey) remove(ref(db,`games/${gameKey}/players/${myId}`));
-  show('screen-multi-choice');
-};
-document.getElementById('multi-result-home').onclick = ()=>{
-  if (myId && gameKey) remove(ref(db,`games/${gameKey}/players/${myId}`));
-  show('screen-multi-choice');
-};
-document.getElementById('solo-home').onclick = ()=>show('screen-home');
-
-// ===== 솔로 모드 =====
-let soloNums = [], soloTarget = 0;
 function soloShuffle(a) {
   let arr = a.slice();
   for (let i=arr.length-1;i>0;i--) {
@@ -92,11 +47,18 @@ function soloShuffle(a) {
   }
   return arr;
 }
+
+// ======== STATE ========
+let myId = '', myName = '', isHost = false, currentQ = 0, gameKey = '';
+let soloNums = [], soloTarget = 0;
+
+// ================= SOLO =================
 function soloNewGame() {
   soloNums = soloShuffle([1,2,3,4,5,6,7,8,9]);
   let html = '';
   for(let i=0;i<9;i++) html += `<div class="cell">${soloNums[i]}</div>`;
   document.getElementById('solo-grid').innerHTML = html;
+
   const lines = [
     [0,1,2],[3,4,5],[6,7,8],
     [0,3,6],[1,4,7],[2,5,8],
@@ -105,8 +67,9 @@ function soloNewGame() {
   const line = lines[Math.floor(Math.random()*lines.length)];
   const vals = line.map(i=>soloNums[i]);
   let target = vals[0]+vals[1]+vals[2];
+
   let expr, value;
-  let ops = ['+','-','*','/'];
+  const ops = ['+','-','*','/'];
   for(let k=0;k<40;k++) {
     let [a,b,c] = vals;
     let op1 = ops[Math.floor(Math.random()*4)];
@@ -124,6 +87,14 @@ function soloNewGame() {
   document.getElementById('solo-target').textContent = `목표 숫자: ${target}`;
   document.getElementById('solo-msg').textContent = '';
 }
+
+document.getElementById('btn-solo').onclick = () => {
+  show('screen-solo');
+  soloNewGame();
+};
+document.getElementById('solo-restart').onclick = soloNewGame;
+document.getElementById('solo-home').onclick = ()=>show('screen-home');
+
 document.getElementById('solo-form').onsubmit = function(e){
   e.preventDefault();
   const expr = document.getElementById('solo-input').value.trim();
@@ -165,22 +136,85 @@ document.getElementById('solo-form').onsubmit = function(e){
     document.getElementById('solo-msg').textContent = '올바른 수식이 아닙니다!';
   }
 };
-document.getElementById('solo-restart').onclick = soloNewGame;
 
-// ===== 닉네임 입력/입장 =====
+// ================= MULTI - UI nav =================
+document.getElementById('btn-multi').onclick = () => show('screen-multi-choice');
+
+document.getElementById('multi-choice-home').onclick = ()=>show('screen-home');
+document.getElementById('multi-nick-home').onclick = ()=>show('screen-multi-choice');
+document.getElementById('multi-lobby-home').onclick = async ()=>{
+  if (myId && gameKey) {
+    await remove(ref(db,`games/${gameKey}/players/${myId}`));
+  }
+  show('screen-multi-choice');
+};
+document.getElementById('multi-game-home').onclick = async ()=>{
+  if (myId && gameKey) {
+    await remove(ref(db,`games/${gameKey}/players/${myId}`));
+  }
+  show('screen-multi-choice');
+};
+document.getElementById('multi-result-home').onclick = async ()=>{
+  if (myId && gameKey) {
+    await remove(ref(db,`games/${gameKey}/players/${myId}`));
+  }
+  show('screen-multi-choice');
+};
+
+// ===== room create / join =====
+document.getElementById('btn-create-room').onclick = async () => {
+  let roomId = makeRoomId();
+  // avoid collision
+  while((await get(ref(db,`games/${roomId}`))).exists()) {
+    roomId = makeRoomId();
+  }
+  gameKey = roomId;
+  await set(ref(db,`games/${roomId}/meta`), {created: Date.now()});
+  document.getElementById('room-code').textContent = roomId;
+
+  // start database listeners for this room
+  startPlayersListener();
+  startStateListener();
+
+  show('screen-multi-nick');
+};
+
+document.getElementById('btn-join-room').onclick = async () => {
+  const input = prompt("방 코드 입력 (예: K94F)");
+  if (!input) return;
+  const roomId = input.toUpperCase().trim();
+  const snap = await get(ref(db,`games/${roomId}`));
+  if (snap.exists()) {
+    gameKey = roomId;
+    document.getElementById('room-code').textContent = roomId;
+
+    // start listeners
+    startPlayersListener();
+    startStateListener();
+
+    show('screen-multi-nick');
+  } else {
+    alert("해당 방이 존재하지 않습니다.");
+  }
+};
+
+// ===== nick enter =====
 document.getElementById('multi-nick-btn').onclick = async () => {
   const nick = document.getElementById('multi-nick').value.trim();
   if(!nick) return alert("닉네임을 입력하세요!");
   myName = nick;
   myId = 'p'+Math.random().toString(36).substring(2,10);
-  await set(ref(db,`games/${gameKey}/players/${myId}`), {
+  const playerRef = ref(db,`games/${gameKey}/players/${myId}`);
+  await set(playerRef, {
     name: myName,
     score: 0,
     joined: Date.now(),
     online: true
   });
-  ref(db,`games/${gameKey}/players/${myId}`).onDisconnect().remove();
-  // 게임상태에 따라 진입화면 다르게
+  // remove on disconnect
+  onDisconnect(playerRef).remove();
+
+  // check state and route
   const state = (await get(ref(db,`games/${gameKey}/state`))).val();
   if(state && state.started && state.current < 10) {
     show('screen-multi-game');
@@ -193,38 +227,52 @@ document.getElementById('multi-nick-btn').onclick = async () => {
   document.getElementById('multi-nick').value = '';
 };
 
-// ===== 대기실 참가자 =====
-onValue(ref(db,()=>gameKey?`games/${gameKey}/players`:null), snap=>{
+// ===== players listener & host logic =====
+function startPlayersListener() {
   if (!gameKey) return;
-  let html = '';
-  let playerArr = [];
-  snap.forEach(child=>{
-    const v = child.val();
-    playerArr.push({id:child.key, ...v});
-    html += `<div>${v.name} <span style="color:#1976d2;">${v.score}점</span></div>`;
-  });
-  document.getElementById('multi-players').innerHTML = html;
-  if(playerArr.length>0 && playerArr[0].id===myId) {
-    isHost = true;
-    document.getElementById('multi-start-btn').style.display = '';
-  } else {
-    isHost = false;
-    document.getElementById('multi-start-btn').style.display = 'none';
-  }
-  // 자동 방 삭제: players가 0명이면 방 전체 삭제
-  if (!snap.exists() || snap.size === 0) {
-    remove(ref(db,`games/${gameKey}`));
-    show('screen-multi-choice');
-  }
-});
+  onValue(ref(db, `games/${gameKey}/players`), snap => {
+    if (!snap.exists()) {
+      // if room now empty, delete room and go to multi choice
+      remove(ref(db, `games/${gameKey}`)).catch(()=>{});
+      show('screen-multi-choice');
+      return;
+    }
+    let html = '';
+    let playerArr = [];
+    snap.forEach(child=>{
+      const v = child.val();
+      playerArr.push({id: child.key, ...v});
+    });
 
-// ===== 게임시작 =====
+    // sort by joined time so host = earliest joiner
+    playerArr.sort((a,b)=> (a.joined||0) - (b.joined||0));
+
+    playerArr.forEach(p=>{
+      html += `<div>${p.name} <span style="color:#1976d2;">${p.score||0}점</span></div>`;
+    });
+    document.getElementById('multi-players').innerHTML = html;
+
+    if (playerArr.length>0 && playerArr[0].id === myId) {
+      isHost = true;
+      document.getElementById('multi-start-btn').style.display = '';
+    } else {
+      isHost = false;
+      document.getElementById('multi-start-btn').style.display = 'none';
+    }
+  });
+}
+
+// ===== start game (host) =====
 document.getElementById('multi-start-btn').onclick = async () => {
-  const state = (await get(ref(db,`games/${gameKey}/state`))).val();
-  if(state && state.started) return;
+  if(!isHost) return;
+  const stateSnap = await get(ref(db,`games/${gameKey}/state`));
+  const stateVal = stateSnap.val();
+  if(stateVal && stateVal.started) return;
+
   const questions = [];
   for(let i=0;i<10;i++) {
     const nums = soloShuffle([1,2,3,4,5,6,7,8,9]);
+    // build grid 3x3
     let grid = [];
     for(let j=0;j<9;j+=3) grid.push(nums.slice(j,j+3));
     let q = genQuestion(nums);
@@ -236,60 +284,69 @@ document.getElementById('multi-start-btn').onclick = async () => {
     started:true, current:0, winner:'', answered:false
   });
   await set(ref(db,`games/${gameKey}/questions`), questions);
-  get(ref(db,`games/${gameKey}/players`)).then(snap=>{
-    snap.forEach(child=>{
-      update(ref(db,`games/${gameKey}/players/${child.key}`), {score:0});
-    });
+
+  // reset all players' scores to 0
+  const playersSnap = await get(ref(db,`games/${gameKey}/players`));
+  playersSnap.forEach(child=>{
+    update(ref(db,`games/${gameKey}/players/${child.key}`), {score:0});
   });
 };
+
+// ===== genQuestion helper =====
 function genQuestion(nums) {
   const lines = [
-    [0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
   ];
   const line = lines[Math.floor(Math.random()*lines.length)];
   const vals = line.map(i=>nums[i]);
   let target = vals[0]+vals[1]+vals[2];
-  let expr, value;
-  let ops = ['+','-','*','/'];
+  let expr = `${vals[0]}+${vals[1]}+${vals[2]}`;
+  let value;
+  const ops = ['+','-','*','/'];
   for(let k=0;k<40;k++) {
     let [a,b,c] = vals;
     let op1 = ops[Math.floor(Math.random()*4)];
     let op2 = ops[Math.floor(Math.random()*4)];
-    expr = `${a}${op1}${b}${op2}${c}`;
+    const attempt = `${a}${op1}${b}${op2}${c}`;
     try{
-      value = Math.round(eval(expr) * 1000)/1000;
+      value = Math.round(eval(attempt) * 1000)/1000;
       if(Number.isFinite(value) && value%1===0 && value>=1 && value<=36) {
         target = value;
+        expr = attempt;
         break;
       }
     }catch{}
   }
-  return {target, answer:expr};
+  return {target, answer: expr};
 }
 
-// ===== 게임진행 감시 =====
-onValue(ref(db,()=>gameKey?`games/${gameKey}/state`:null), snap=>{
-  if(!gameKey) return;
-  const state = snap.val();
-  if(!state || !state.started) return;
-  currentQ = state.current;
-  if(currentQ>=10) {
-    multiShowResult();
-    return;
-  }
-  show('screen-multi-game');
-  multiRenderQuestion();
+// ===== state listener =====
+function startStateListener() {
+  if (!gameKey) return;
+  onValue(ref(db, `games/${gameKey}/state`), snap => {
+    const state = snap.val();
+    if(!state || !state.started) return;
+    currentQ = state.current || 0;
+    if (currentQ >= 10) {
+      multiShowResult();
+      return;
+    }
+    show('screen-multi-game');
+    multiRenderQuestion();
 
-  if(state.answered && state.winner){
-    document.getElementById('multi-msg').textContent = `${state.winner}님이 정답을 맞췄어요!`;
-    document.getElementById('multi-answer-input').disabled = true;
-  } else {
-    document.getElementById('multi-answer-input').disabled = false;
-    document.getElementById('multi-msg').textContent = '';
-  }
-});
+    if (state.answered && state.winner) {
+      document.getElementById('multi-msg').textContent = `${state.winner}님이 정답을 맞췄어요!`;
+      document.getElementById('multi-answer-input').disabled = true;
+    } else {
+      document.getElementById('multi-answer-input').disabled = false;
+      document.getElementById('multi-msg').textContent = '';
+    }
+  });
+}
 
-// ===== 문제 표시 =====
+// ===== render question & scoreboard =====
 function multiRenderQuestion() {
   get(ref(db,`games/${gameKey}/questions/${currentQ}`)).then(snap=>{
     const q = snap.val();
@@ -306,34 +363,38 @@ function multiRenderQuestion() {
     document.getElementById('multi-answer-input').value = '';
     document.getElementById('multi-msg').textContent = '';
     document.getElementById('multi-answer-input').disabled = false;
-  });
+  }).catch(()=>{});
   multiRenderScore();
 }
-// ===== 점수판 =====
+
 function multiRenderScore() {
   get(ref(db,`games/${gameKey}/players`)).then(snap=>{
+    if(!snap.exists()) return;
     let list = [];
     snap.forEach(child=>{
-      list.push(child.val());
+      const v = child.val();
+      list.push(v);
     });
-    list.sort((a,b)=>b.score-a.score);
+    list.sort((a,b)=> (b.score||0) - (a.score||0));
     let html = '<div>순위</div>';
     list.forEach((p,i)=>{
-      html += `<div>${i+1}위 ${p.name} - ${p.score}점</div>`;
+      html += `<div>${i+1}위 ${p.name} - ${p.score||0}점</div>`;
     });
     document.getElementById('multi-scoreboard').innerHTML = html;
-  });
+  }).catch(()=>{});
 }
 
-// ===== 정답 입력 =====
+// ===== answer submit =====
 document.getElementById('multi-answer-form').onsubmit = async (e) => {
   e.preventDefault();
   const expr = document.getElementById('multi-answer-input').value.trim();
   document.getElementById('multi-answer-input').value = '';
+  if(!gameKey) return;
   const st = (await get(ref(db,`games/${gameKey}/state`))).val();
-  if(st.answered) return;
+  if(st && st.answered) return;
 
   const q = (await get(ref(db,`games/${gameKey}/questions/${currentQ}`))).val();
+  if(!q) return;
   const matches = expr.match(/\d+/g);
   if(!matches || matches.length!==3) {
     document.getElementById('multi-msg').textContent = '숫자 3개를 사용해야 합니다!';
@@ -366,22 +427,27 @@ document.getElementById('multi-answer-form').onsubmit = async (e) => {
     let val = eval(expr);
     if(Math.round(val*1000)/1000 == q.target){
       document.getElementById('multi-msg').textContent = '정답!';
-      let myScore = 1;
-      get(ref(db,`games/${gameKey}/players/${myId}`)).then(snap=>{
-        myScore = (snap.val().score||0)+1;
-        update(ref(db,`games/${gameKey}/players/${myId}`),{score:myScore});
-      });
+      // increase my score
+      const playerSnap = await get(ref(db,`games/${gameKey}/players/${myId}`));
+      const myScore = (playerSnap.exists() ? (playerSnap.val().score||0) : 0) + 1;
+      await update(ref(db,`games/${gameKey}/players/${myId}`),{score:myScore});
       await update(ref(db,`games/${gameKey}/state`),{
         winner:myName, answered:true
       });
       document.getElementById('multi-answer-input').disabled = true;
-      setTimeout(()=>{
-        update(ref(db,`games/${gameKey}/state`),{
-          current:currentQ+1, winner:'', answered:false
+
+      // move to next question after short delay
+      setTimeout(async ()=>{
+        // move to next question index
+        const st2 = (await get(ref(db,`games/${gameKey}/state`))).val();
+        const nextIndex = (st2 && typeof st2.current === 'number') ? st2.current+1 : currentQ+1;
+        await update(ref(db,`games/${gameKey}/state`),{
+          current: nextIndex,
+          winner:'', answered:false
         });
         document.getElementById('multi-answer-input').disabled = false;
         document.getElementById('multi-msg').textContent = '';
-      }, 1500);
+      }, 1400);
     } else {
       document.getElementById('multi-msg').textContent = '틀렸어요!';
     }
@@ -389,21 +455,25 @@ document.getElementById('multi-answer-form').onsubmit = async (e) => {
     document.getElementById('multi-msg').textContent = '올바른 수식이 아닙니다!';
   }
 };
-// ===== 결과 =====
+
+// ===== show result =====
 function multiShowResult() {
   show('screen-multi-result');
   get(ref(db,`games/${gameKey}/players`)).then(snap=>{
+    if(!snap.exists()) return;
     let list = [];
     snap.forEach(child=>{
-      list.push(child.val());
+      const v = child.val();
+      list.push(v);
     });
-    list.sort((a,b)=>b.score-a.score);
+    list.sort((a,b)=> (b.score||0) - (a.score||0));
     let html = '<div>최종 랭킹</div>';
     list.forEach((p,i)=>{
-      html += `<div>${i+1}위 ${p.name} - ${p.score}점</div>`;
+      html += `<div>${i+1}위 ${p.name} - ${p.score||0}점</div>`;
     });
     document.getElementById('multi-final-score').innerHTML = html;
-  });
+  }).catch(()=>{});
 }
+
 document.getElementById('multi-restart-btn').onclick = ()=>location.reload();
 document.getElementById('username-display').textContent = 'By Hyunsoo';
